@@ -61,9 +61,8 @@ def count_type(str):
 
 def check_type(str):
     str=str.strip()
-    booleans = ["true", "false"]
     if len(str) == 0: return 'UNKNOW'
-    elif any(x in str for x in booleans):
+    elif str == "true" or str == "false":
         return 'BOOL'
     elif str.startswith('"') and str.endswith('"'):
         return 'STRING'
@@ -111,9 +110,31 @@ for path, subdirs, files in os.walk(root):
                             elif(param1 == "UNKNOW" and param2 != "UNKNOW"):
                                 count_type(param2)
                                 print(param2)
+                        else:
+                            nb_unclassified += 1
+                            print("UNCLASSIFIED")
                     elif "assertNotEquals(" in line:
                         nb_assert += 1
                         nb_not_equals += 1
+                        tmp = line.strip().replace("()", "") # remove lambda expression
+                        tmp = tmp[tmp.find("(")+1:tmp.find(")")] # capture parameters
+                        params = list(filter(None, tmp.split(",", 1)))
+                        print(len(params), params)
+                        if(len(params) == 2):
+                            param1 = check_type(params[0])
+                            param2 = check_type(params[1])
+                            if(param1 == "UNKNOW" and param2 == "UNKNOW"):
+                                count_type("UNKNOW")
+                                print("UNKNOW")
+                            elif(param1 != "UNKNOW" and param2 == "UNKNOW"):
+                                count_type(param1)
+                                print(param1)
+                            elif(param1 == "UNKNOW" and param2 != "UNKNOW"):
+                                count_type(param2)
+                                print(param2)
+                        else:
+                            nb_unclassified += 1
+                            print("UNCLASSIFIED")
                     elif "assertTrue(" in line:
                         nb_assert += 1
                         nb_true += 1
