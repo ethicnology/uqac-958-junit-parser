@@ -1,9 +1,5 @@
-import os
-import argparse
-import pathlib
-import ast
+import os, sys, argparse, pathlib, ast
 from fnmatch import fnmatch
-import csv, time
 
 current_path = pathlib.Path().absolute()
 
@@ -41,10 +37,9 @@ nb_class = 0
 nb_unclassified = 0
 nb_error = 0
 
-
 def count_type(str):
     global nb_class, nb_string, nb_int, nb_float, nb_boolean, nb_unclassified, nb_error
-    if str == "UNKNOW": 
+    if str == "UNCLASSIFIED": 
         nb_unclassified += 1 # We don't know if it's a string or a variable name
     elif str == "CLASS":
         nb_class += 1
@@ -61,7 +56,7 @@ def count_type(str):
 
 def check_type(str):
     str=str.strip()
-    if len(str) == 0: return 'UNKNOW'
+    if len(str) == 0: return 'UNCLASSIFIED'
     elif str == "true" or str == "false":
         return 'BOOL'
     elif str.startswith('"') and str.endswith('"'):
@@ -71,9 +66,9 @@ def check_type(str):
     try:
         t=ast.literal_eval(str)
     except ValueError:
-        return 'UNKNOW'
+        return 'UNCLASSIFIED'
     except SyntaxError:
-        return 'UNKNOW'
+        return 'UNCLASSIFIED'
     else:
         if type(t) in [int, float]:
             if type(t) is int :
@@ -81,7 +76,7 @@ def check_type(str):
             if type(t) is float:
                 return 'FLOAT'
         else:
-            return 'UNKNOW' 
+            return 'UNCLASSIFIED' 
 
 
 for path, subdirs, files in os.walk(root):
@@ -91,50 +86,54 @@ for path, subdirs, files in os.walk(root):
             with open(file_path) as fp:
                 for line in fp:
                     if "assertEquals(" in line:
-                        print(line.strip())
+                        #print(line.strip())
                         nb_assert += 1
                         nb_equals += 1
                         tmp = line.strip().replace("()", "") # remove lambda expression
                         tmp = tmp[tmp.find("(")+1:tmp.find(")")] # capture parameters
                         params = list(filter(None, tmp.split(",", 1)))
-                        print(len(params), params)
+                        #print(len(params), params)
                         if(len(params) == 2):
                             param1 = check_type(params[0])
                             param2 = check_type(params[1])
-                            if(param1 == "UNKNOW" and param2 == "UNKNOW"):
-                                count_type("UNKNOW")
-                                print("UNKNOW")
-                            elif(param1 != "UNKNOW" and param2 == "UNKNOW"):
+                            if(param1 == "UNCLASSIFIED" and param2 == "UNCLASSIFIED"):
+                                count_type("UNCLASSIFIED")
+                                #print("UNCLASSIFIED")
+                            elif(param1 != "UNCLASSIFIED" and param2 == "UNCLASSIFIED"):
                                 count_type(param1)
-                                print(param1)
-                            elif(param1 == "UNKNOW" and param2 != "UNKNOW"):
+                                #print(param1)
+                            elif(param1 == "UNCLASSIFIED" and param2 != "UNCLASSIFIED"):
                                 count_type(param2)
-                                print(param2)
+                                #print(param2)
+                            else:
+                                count_type("UNCLASSIFIED")                                
                         else:
-                            nb_unclassified += 1
-                            print("UNCLASSIFIED")
+                            count_type("UNCLASSIFIED")
+                            #print("UNCLASSIFIED")
                     elif "assertNotEquals(" in line:
                         nb_assert += 1
                         nb_not_equals += 1
                         tmp = line.strip().replace("()", "") # remove lambda expression
                         tmp = tmp[tmp.find("(")+1:tmp.find(")")] # capture parameters
                         params = list(filter(None, tmp.split(",", 1)))
-                        print(len(params), params)
+                        #print(len(params), params)
                         if(len(params) == 2):
                             param1 = check_type(params[0])
                             param2 = check_type(params[1])
-                            if(param1 == "UNKNOW" and param2 == "UNKNOW"):
-                                count_type("UNKNOW")
-                                print("UNKNOW")
-                            elif(param1 != "UNKNOW" and param2 == "UNKNOW"):
+                            if(param1 == "UNCLASSIFIED" and param2 == "UNCLASSIFIED"):
+                                count_type("UNCLASSIFIED")
+                                #print("UNCLASSIFIED")
+                            elif(param1 != "UNCLASSIFIED" and param2 == "UNCLASSIFIED"):
                                 count_type(param1)
-                                print(param1)
-                            elif(param1 == "UNKNOW" and param2 != "UNKNOW"):
+                                #print(param1)
+                            elif(param1 == "UNCLASSIFIED" and param2 != "UNCLASSIFIED"):
                                 count_type(param2)
-                                print(param2)
+                                #print(param2)
+                            else:
+                                count_type("UNCLASSIFIED") 
                         else:
-                            nb_unclassified += 1
-                            print("UNCLASSIFIED")
+                            count_type("UNCLASSIFIED")
+                            #print("UNCLASSIFIED")
                     elif "assertTrue(" in line:
                         nb_assert += 1
                         nb_true += 1
@@ -181,10 +180,10 @@ for path, subdirs, files in os.walk(root):
                         nb_assert += 1
                         nb_timeout_preemptively += 1
 
-total_types = nb_class + nb_string + nb_int + nb_float + nb_boolean + nb_unclassified + nb_error
-localtime = time.asctime(time.localtime(time.time()))
-
-with open(localtime +'junit-parser.csv', 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(["project"   ,"total_assert",  "nb_equals", "nb_not_equals", "nb_true", "nb_false", "nb_throws", "nb_does_not_throw", "nb_null", "nb_not_null", "nb_same", "nb_not_same", "nb_array_equals", "nb_timeout", "nb_timeout_preemptively", "nb_iterable_equals", "nb_lines_match", "nb_fail", "total_types", "nb_class", "nb_string", "nb_int", "nb_float", "nb_boolean", "nb_unclassified", "nb_error"])
-    writer.writerow([ args.path  ,nb_assert,        nb_equals,   nb_not_equals,   nb_true,   nb_false,   nb_throws,   nb_does_not_throw,   nb_null,   nb_not_null,   nb_same,   nb_not_same,   nb_array_equals,   nb_timeout,   nb_timeout_preemptively,   nb_iterable_equals,   nb_lines_match,   nb_fail,   total_types,   nb_class,   nb_string,   nb_int,   nb_float,   nb_boolean,   nb_unclassified,   nb_error])
+assert(nb_assert == nb_equals+nb_not_equals+nb_true+nb_false+nb_that+nb_throws+nb_does_not_throw+nb_null+nb_not_null+nb_same+nb_not_same+nb_array_equals+nb_timeout+nb_timeout_preemptively+nb_iterable_equals+nb_lines_match+nb_fail)
+nb_types = nb_class+nb_string+nb_int+nb_float+nb_boolean+nb_unclassified+nb_error
+assert(nb_types == nb_equals + nb_not_equals)
+project = args.path.replace("/", "").replace(".","")
+# print as CSV
+print( "project",  "nb_equals", "nb_not_equals", "nb_true", "nb_false", "nb_that", "nb_throws", "nb_does_not_throw", "nb_null", "nb_not_null", "nb_same", "nb_not_same", "nb_array_equals", "nb_timeout", "nb_timeout_preemptively", "nb_iterable_equals", "nb_lines_match", "nb_fail", "nb_types", "nb_class", "nb_string", "nb_int", "nb_float", "nb_boolean", "nb_unclassified", "nb_error",sep=",")
+print( project,     nb_equals,   nb_not_equals,   nb_true,   nb_false,   nb_that,   nb_throws,   nb_does_not_throw,   nb_null,   nb_not_null,   nb_same,   nb_not_same,   nb_array_equals,   nb_timeout,   nb_timeout_preemptively,   nb_iterable_equals,   nb_lines_match,   nb_fail,   nb_types,  nb_class,   nb_string,   nb_int,   nb_float,   nb_boolean,   nb_unclassified,   nb_error,sep=",")
